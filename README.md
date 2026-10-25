@@ -1,34 +1,22 @@
 # Presenter
 
-Una capa ligera para presentar en macOS. Resalta un elemento, amplía la pantalla, escribe sobre una diapositiva o elige un estudiante al azar.
+Una capa ligera para presentar. Resalta un elemento, amplía la pantalla, escribe sobre una diapositiva o elige un estudiante al azar.
 
-## Ejecutar
+## Descargas
 
-```bash
-uv sync
-uv run presenter
-```
+| Sistema | Archivo | Instrucciones |
+| --- | --- | --- |
+| macOS (Apple Silicon) | [Presenter-macOS-arm64.dmg](mac/Presenter-macOS-arm64.dmg) | [mac/README.md](mac/README.md) |
+| Windows 10 y 11 (64 bits) | [Presenter.exe](windows/Presenter.exe) | [windows/README.md](windows/README.md) |
+| Linux (x86_64) | [Presenter-linux-x86_64](linux/Presenter-linux-x86_64) | [linux/README.md](linux/README.md) |
 
 La barra queda en la parte inferior de la pantalla. Arrastra el anillo dorado para moverla.
 
-## Aplicación de escritorio
-
-Hay que empaquetar en el mismo sistema donde se va a usar.
-
-En macOS, el comando crea `dist/Presenter.app`. Ábrela con doble clic o cópiala a Aplicaciones. Antes, genera el icono con `uv run python packaging/make_icon.py`. La primera vez, macOS pide Accesibilidad y Grabación de pantalla para **Presenter**.
-
-En Windows, el mismo comando crea `dist/Presenter.exe`.
-
-En Linux, crea la carpeta `dist/Presenter/`. El programa es `dist/Presenter/Presenter`. Dale permiso de ejecución si hace falta (`chmod +x dist/Presenter/Presenter`) y ábrelo desde ahí. Los atajos globales y la captura del zoom funcionan en X11; en Wayland el escritorio suele bloquearlos. El dibujo, la barra y el resto de la app siguen disponibles.
-
-```bash
-uv sync --group package
-uv run pyinstaller presenter.spec --noconfirm
-```
+El código fuente está en la rama [`development`](../../tree/development).
 
 ## Permisos de macOS
 
-Presenter necesita dos permisos. Si lo abres con `uv run`, macOS se los concede a la app que abre Python (Terminal, iTerm o Cursor). Si abres `Presenter.app`, se los concede a Presenter:
+La primera vez, macOS pide dos permisos para **Presenter**:
 
 - **Accesibilidad** — atajos de teclado y enmarcar mientras sigues presentando.
 - **Grabación de pantalla** — el zoom.
@@ -48,7 +36,9 @@ Si aparece un aviso, permítelo, cierra Presenter y ábrelo de nuevo.
 | Salir de la herramienta | Esc |
 | Deshacer | ⌘Z |
 
-Al resaltar, pulsa **Marco** y arrastra alrededor de un elemento. Mantén ⌥ y arrastra para enmarcar sin salir de la diapositiva. Desplázate, o usa + y −, para cambiar el foco de luz o el zoom. Con varias pantallas, Zoom pide primero cuál ampliar y sigue al puntero solo en esa pantalla. Con el zoom activo, un doble clic pasa al lápiz y otro doble clic vuelve a mover.
+En Windows y Linux, ⌃ es Ctrl, ⌥ es Alt y Deshacer es Ctrl+Z.
+
+Al resaltar, pulsa **Marco** y arrastra alrededor de un elemento. Mantén ⌥ y arrastra para enmarcar sin salir de la diapositiva. Mantén ⌃ y desplázate, o usa + y −, para cambiar el foco de luz; la rueda sola sigue moviendo la diapositiva. En Zoom, desplázate o usa + y − para cambiar el aumento. Con varias pantallas, Zoom pide primero cuál ampliar y sigue al puntero solo en esa pantalla. Con el zoom activo, un doble clic pasa al lápiz y otro doble clic vuelve a mover.
 
 La tinta y los marcos permanecen al salir de una herramienta. **Borrar** los quita. **Listo** o Esc da un paso atrás.
 
