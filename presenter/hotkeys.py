@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sys
 import threading
 
 try:
@@ -10,16 +11,32 @@ except Exception:  # pragma: no cover - the dock still works without global hook
     keyboard = None
     mouse = None
 
-# ANSI virtual keycodes from HIToolbox/Events.h
-_SHORTCUTS = {
-    4: "spotlight",   # H
-    37: "laser",      # L
-    6: "zoom",        # Z
-    46: "lens",       # M
-    2: "draw",        # D
-    17: "text",       # T
-    35: "dock",       # P
+_LETTERS = {
+    "h": "spotlight",
+    "l": "laser",
+    "z": "zoom",
+    "m": "lens",
+    "d": "draw",
+    "t": "text",
+    "p": "dock",
 }
+
+# ANSI virtual keycodes from HIToolbox/Events.h
+_MAC_KEYS = {"h": 4, "l": 37, "z": 6, "m": 46, "d": 2, "t": 17, "p": 35}
+
+
+def _codes(letter: str) -> tuple[int, ...]:
+    """The key's vk as pynput reports it on each system."""
+    if sys.platform == "darwin":
+        return (_MAC_KEYS[letter],)
+    if sys.platform == "win32":
+        return (ord(letter.upper()),)  # Windows virtual-key codes
+    return (ord(letter), ord(letter.upper()))  # X11 keysyms, lower and upper case
+
+
+_SHORTCUTS = {code: action for letter, action in _LETTERS.items() for code in _codes(letter)}
+_UNDO_KEYS = _codes("z")
+_UNDO_HELD = {"cmd"} if sys.platform == "darwin" else {"ctrl"}
 
 
 class Hotkeys:
@@ -114,13 +131,15 @@ class Hotkeys:
     def _action_for(self, token: str) -> str | None:
         if token == "esc":
             return "escape"
-        if token == "vk:6" and "cmd" in self._down and "ctrl" not in self._down and "alt" not in self._down:
+        if not token.startswith("vk:"):
+            return None
+        try:
+            code = int(token.split(":", 1)[1])
+        except ValueError:
+            return None
+        if code in _UNDO_KEYS and self._down & {"cmd", "ctrl", "alt"} == _UNDO_HELD:
             return "undo"
-        if token.startswith("vk:") and "ctrl" in self._down and "alt" in self._down:
-            try:
-                code = int(token.split(":", 1)[1])
-            except ValueError:
-                return None
+        if "ctrl" in self._down and "alt" in self._down:
             return _SHORTCUTS.get(code)
         return None
 

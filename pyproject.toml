@@ -20,6 +20,11 @@ package = [
     "pyinstaller>=6.11",
 ]
 
+[tool.uv]
+# pynput pulls evdev on Linux only for its uinput backend; Presenter uses xorg,
+# and evdev has no wheels, so it would need a compiler and kernel headers.
+override-dependencies = ["evdev; sys_platform == 'never'"]
+
 [build-system]
 requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"

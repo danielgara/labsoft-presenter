@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import sys
+
 from PyQt6.QtCore import (
     QEasingCurve,
+    QEvent,
     QPoint,
     QPointF,
     QRectF,
@@ -20,6 +23,7 @@ from PyQt6.QtGui import (
     QPen,
     QPixmap,
     QRadialGradient,
+    QRegion,
 )
 from PyQt6.QtWidgets import QApplication, QFrame, QTextEdit, QWidget
 
@@ -27,9 +31,12 @@ from presenter.capture import capture_screen
 from presenter.cocoa import FloatingWindow, activate_app
 from presenter.ink import measure_note, paint_frame, paint_note, paint_stroke
 from presenter.model import Document, Frame, Note, Stroke, UiState, dist
-from presenter.theme import ACCENT, PALETTE
+from presenter.theme import ACCENT, DOCK_SHADOW, PALETTE
 
 _DRAW_SHAPES = ("pen", "marker", "line", "arrow", "rect", "ellipse", "eraser")
+# Windows sends clicks on fully transparent pixels to the window below, so a
+# stage that takes the pen keeps an invisible film to receive them.
+_HIT_FILL = QColor(0, 0, 0, 1) if sys.platform == "win32" else QColor(Qt.GlobalColor.transparent)
 _HINTS = {
     "idle": "Resalta, amplía y escribe sobre la diapositiva",
     "laser": "La luz es el puntero",
@@ -265,8 +272,54 @@ class Overlay(FloatingWindow):
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self._blank = self._make_blank_cursor()
         self._sheets: dict[tuple[int, int, int, int], InkSheet] = {}
+        self._clear: list[QWidget] = []
         self.changed.connect(self._sync_sheets)
         self.hide()
+
+    def keep_clear(self, widgets: list[QWidget]) -> None:
+        """Leave a hole over the tool bar and guide on X11.
+
+        X11 hands the stage every click inside it, even on clear pixels, and
+        the window manager may stack it above the bar. A hole in its shape
+        sends those clicks to the bar below, whatever the stacking.
+        """
+        if sys.platform in ("darwin", "win32"):
+            return
+        self._clear = list(widgets)
+        for widget in self._clear:
+            widget.installEventFilter(self)
+
+    def eventFilter(self, watched, event) -> bool:  # noqa: N802
+        if watched in self._clear and event.type() in (
+            QEvent.Type.Move,
+            QEvent.Type.Resize,
+            QEvent.Type.Show,
+            QEvent.Type.Hide,
+        ):
+            self._sync_hole()
+        return super().eventFilter(watched, event)
+
+    def moveEvent(self, event) -> None:  # noqa: N802
+        super().moveEvent(event)
+        self._sync_hole()
+
+    def resizeEvent(self, event) -> None:  # noqa: N802
+        super().resizeEvent(event)
+        self._sync_hole()
+
+    def _sync_hole(self) -> None:
+        if not self._clear:
+            return
+        left, top, right, bottom = DOCK_SHADOW
+        region = QRegion(self.rect())
+        for widget in self._clear:
+            if widget.isVisible():
+                glass = widget.geometry().adjusted(left, top, -right, -bottom)
+                region -= QRegion(glass.translated(-self.geometry().topLeft()))
+        if region == QRegion(self.rect()):
+            self.clearMask()
+        else:
+            self.setMask(region)
 
     def ui_state(self) -> UiState:
         return UiState(
@@ -520,7 +573,7 @@ class Overlay(FloatingWindow):
         painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
         painter.setRenderHint(QPainter.RenderHint.TextAntialiasing)
         painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_Source)
-        painter.fillRect(self.rect(), Qt.GlobalColor.transparent)
+        painter.fillRect(self.rect(), _HIT_FILL if self.captures_mouse() else Qt.GlobalColor.transparent)
         painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceOver)
 
         if self.mode == "zoom" and self.shot is not None and not self.shot.isNull():
