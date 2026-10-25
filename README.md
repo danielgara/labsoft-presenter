@@ -19,11 +19,20 @@ En macOS, el comando crea `dist/Presenter.app`. Ábrela con doble clic o cópial
 
 En Windows, el mismo comando crea `dist/Presenter.exe`.
 
-En Linux, crea la carpeta `dist/Presenter/`. El programa es `dist/Presenter/Presenter`. Dale permiso de ejecución si hace falta (`chmod +x dist/Presenter/Presenter`) y ábrelo desde ahí. Los atajos globales y la captura del zoom funcionan en X11; en Wayland el escritorio suele bloquearlos. El dibujo, la barra y el resto de la app siguen disponibles.
+En Linux, crea un solo archivo, `dist/Presenter`. Dale permiso de ejecución si hace falta (`chmod +x dist/Presenter`) y ábrelo. Los atajos globales y la captura del zoom funcionan en X11; en Wayland el escritorio suele bloquearlos. El dibujo, la barra y el resto de la app siguen disponibles.
 
 ```bash
 uv sync --group package
 uv run pyinstaller presenter.spec --noconfirm
+```
+
+Para la descarga de macOS, mete la app en un dmg con un acceso a Aplicaciones:
+
+```bash
+mkdir -p build/dmg
+ditto dist/Presenter.app build/dmg/Presenter.app
+ln -sfn /Applications build/dmg/Applications
+hdiutil create -volname Presenter -srcfolder build/dmg -ov -format UDZO -fs HFS+ dist/Presenter-macOS-arm64.dmg
 ```
 
 ## Permisos de macOS
@@ -48,7 +57,9 @@ Si aparece un aviso, permítelo, cierra Presenter y ábrelo de nuevo.
 | Salir de la herramienta | Esc |
 | Deshacer | ⌘Z |
 
-Al resaltar, pulsa **Marco** y arrastra alrededor de un elemento. Mantén ⌥ y arrastra para enmarcar sin salir de la diapositiva. Desplázate, o usa + y −, para cambiar el foco de luz o el zoom. Con varias pantallas, Zoom pide primero cuál ampliar y sigue al puntero solo en esa pantalla. Con el zoom activo, un doble clic pasa al lápiz y otro doble clic vuelve a mover.
+En Windows y Linux, ⌃ es Ctrl, ⌥ es Alt y Deshacer es Ctrl+Z.
+
+Al resaltar, pulsa **Marco** y arrastra alrededor de un elemento. Mantén ⌥ y arrastra para enmarcar sin salir de la diapositiva. Mantén ⌃ y desplázate, o usa + y −, para cambiar el foco de luz; la rueda sola sigue moviendo la diapositiva. En Zoom, desplázate o usa + y − para cambiar el aumento. Con varias pantallas, Zoom pide primero cuál ampliar y sigue al puntero solo en esa pantalla. Con el zoom activo, un doble clic pasa al lápiz y otro doble clic vuelve a mover.
 
 La tinta y los marcos permanecen al salir de una herramienta. **Borrar** los quita. **Listo** o Esc da un paso atrás.
 

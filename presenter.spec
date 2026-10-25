@@ -1,5 +1,5 @@
 # -*- mode: python ; coding: utf-8 -*-
-"""Package Presenter as Presenter.app on macOS and Presenter.exe on Windows."""
+"""Package Presenter as Presenter.app on macOS, Presenter.exe on Windows, and dist/Presenter on Linux."""
 
 import sys
 from pathlib import Path
@@ -41,6 +41,13 @@ elif sys.platform == "win32":
         "pynput.keyboard._win32",
         "pynput.mouse._win32",
     ]
+else:
+    # pynput picks its backend at import time, which fails without a display.
+    hidden += [
+        "pynput.keyboard._xorg",
+        "pynput.mouse._xorg",
+    ]
+    hidden += collect_submodules("Xlib")
 
 a = Analysis(
     [str(root / "packaging" / "entry.py")],
@@ -56,7 +63,7 @@ a = Analysis(
 )
 pyz = PYZ(a.pure)
 
-onefile = sys.platform == "win32"
+onefile = sys.platform != "darwin"
 exe = EXE(
     pyz,
     a.scripts,

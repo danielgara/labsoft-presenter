@@ -169,15 +169,73 @@ class FloatingWindow(QWidget):
         self.setAttribute(Qt.WidgetAttribute.WA_NoSystemBackground, True)
         self.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating, True)
         self._click_through = False
+        self._input_cut = False
+        self._owner: QWidget | None = None
+
+    def keep_above(self, owner: QWidget) -> None:
+        """Stay above owner on Windows, as window levels do on macOS.
+
+        Windows brings a clicked or activated window to the front, but always
+        keeps an owned window above its owner.
+        """
+        if sys.platform != "win32":
+            return
+        self._owner = owner
 
     def showEvent(self, event) -> None:  # noqa: N802
         super().showEvent(event)
+        self._sync_input()
+        self._attach_owner()
         QTimer.singleShot(0, self.apply_native)
+        if sys.platform not in ("darwin", "win32"):
+            QTimer.singleShot(250, self._reshape_frame)
+
+    def _reshape_frame(self) -> None:
+        """Have the window manager's frame take on the stage's input shape.
+
+        Openbox and xfwm4 wrap each mapped window in a frame of their own and
+        copy the input shape to it only when it changes after framing, so a
+        stage mapped click-through would still catch every click.
+        """
+        handle = self.windowHandle()
+        if not self.isVisible() or not self._click_through or handle is None:
+            return
+        handle.setFlag(Qt.WindowType.WindowTransparentForInput, False)
+        handle.setFlag(Qt.WindowType.WindowTransparentForInput, True)
+
+    def _attach_owner(self) -> None:
+        if self._owner is None:
+            return
+        self._owner.winId()
+        handle = self.windowHandle()
+        owner = self._owner.windowHandle()
+        if handle is not None and owner is not None and handle.transientParent() is not owner:
+            handle.setTransientParent(owner)
 
     def apply_native(self) -> None:
         prepare_window(self, level_offset=self.level_offset, click_through=self._click_through)
+        self._sync_input()
 
     def set_click_through(self, enabled: bool) -> None:
         self._click_through = enabled
+        self._sync_input()
         if self.isVisible():
             self.apply_native()
+
+    def resizeEvent(self, event) -> None:  # noqa: N802
+        super().resizeEvent(event)
+        handle = self.windowHandle()
+        if self._input_cut and not self._click_through and handle is not None:
+            # Qt fixes the input shape to the size the window had when clicks came back.
+            handle.setFlag(Qt.WindowType.WindowTransparentForInput, True)
+            handle.setFlag(Qt.WindowType.WindowTransparentForInput, False)
+
+    def _sync_input(self) -> None:
+        """Let clicks fall through on X11, where even clear pixels take them."""
+        if sys.platform in ("darwin", "win32"):
+            return
+        handle = self.windowHandle()
+        flag = Qt.WindowType.WindowTransparentForInput
+        if handle is not None and bool(handle.flags() & flag) != self._click_through:
+            handle.setFlag(flag, self._click_through)
+            self._input_cut = True
