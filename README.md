@@ -4,6 +4,12 @@ Una capa ligera para presentar. Resalta un elemento, amplía la pantalla, escrib
 
 La barra queda en la parte inferior. El anillo dorado, a la izquierda, la arrastra.
 
+![Barra de Presenter](images/barra.png)
+
+Al elegir una herramienta, la misma barra abre sus controles. Así se ve al escribir:
+
+![Controles de Escribir](images/escribir.png)
+
 ## Descargas
 
 | Sistema | Archivo | Instrucciones |
